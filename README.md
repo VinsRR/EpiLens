@@ -1,66 +1,32 @@
 # EpiLens
 
-EpiLens is a local-first Python toolkit for evidence-grounded analysis of
-scientific literature. It parses and indexes papers on your machine, retrieves
-the passages relevant to a question, and can use a local or hosted language
-model to produce answers and structured outputs with inspectable provenance.
-
-It is designed for epidemiological and public-health literature, but its
-retrieval, classification, and extraction workflows can be adapted to other
-scientific domains. The distribution name, import package, and command are all
-`epilens`.
+EpiLens is a local-first Python toolkit for exploring scientific papers. It
+parses and indexes documents, retrieves passages relevant to a question, and
+can use a language model to produce evidence-linked answers or structured
+classifications and extractions. It was built for epidemiology and public
+health, but its workflows can be adapted to other research fields.
 
 ## Install
 
-EpiLens requires Python 3.10 or newer:
+Requires Python 3.10 or newer:
 
 ```bash
 python -m pip install epilens
-epilens --version
 ```
 
-The base install includes lightweight PDF parsing and local semantic retrieval.
-It does not install every model-provider SDK, a database server, or the larger
-ML parsing stack. Add only what you plan to use; the [extras table](#optional-extras)
-shows the choices.
+## Try it on a paper
 
-## A Five-Minute First Run
-
-This path starts with no API key, database, Docker service, or configuration
-file. Replace `paper.pdf` with one of your own papers.
-
-### 1. Inspect a paper
+Replace `paper.pdf` with a PDF on your machine:
 
 ```bash
 epilens inspect paper.pdf
-```
-
-This uses the included `pdfminer` parser. It verifies that the document is
-readable and reports the detected sections and metadata. It works offline and
-does not download a model.
-
-### 2. Retrieve relevant evidence
-
-```bash
 epilens explore "What data sources were used?" --path paper.pdf --quality fast
 ```
 
-The first semantic-retrieval command downloads the small
-`sentence-transformers/all-MiniLM-L6-v2` embedding model (about 90 MB) and
-caches it for later runs. No LLM key is needed; the command returns the most
-relevant source passages.
+These commands need no API key or database server. The first retrieval downloads and
+caches an embedding model; `inspect` works fully offline.
 
-### 3. Generate an answer when you are ready
-
-Without a configured LLM, `ask` still returns the retrieved passages instead of
-failing:
-
-```bash
-epilens ask "What data sources were used?" --path paper.pdf --quality fast
-```
-
-To generate a synthesized answer, install one provider and run the guided
-setup. For example, with Gemini:
+To generate an answer, add a model provider. For example:
 
 ```bash
 python -m pip install "epilens[gemini]"
@@ -68,267 +34,46 @@ epilens quickstart
 epilens ask "What data sources were used?" --path paper.pdf --quality fast
 ```
 
-`quickstart` writes the selected provider and key to a local, ignored `.env`
-file. It does not contact optional services unless you pass `--probe`. You can
-also use local Ollama without a provider SDK or API key.
+`quickstart` guides provider setup. Other hosted providers and local Ollama
+are supported; see [installation](https://github.com/VinsRR/EpiLens/wiki/Installation)
+and [configuration](https://github.com/VinsRR/EpiLens/wiki/Configuration).
 
-### 4. Keep a reusable literature workspace
+## Work with a collection
 
-For more than one command or paper, create a workspace:
+A workspace keeps papers, a local index, and task definitions together. Replace
+`./papers` with a folder of your PDFs:
 
 ```bash
 epilens init my-review
 epilens index ./papers --workspace my-review
-epilens papers --workspace my-review
-epilens ask "Which papers mention GenBank?" --workspace my-review
+epilens explore "Which papers mention data repositories?" --workspace my-review
 ```
 
-The workspace is an ordinary directory containing `epilens.toml`, copied
-papers, a local vector index, metadata, task definitions, outputs, and logs.
-Run commands from inside it, or pass `--workspace` from anywhere.
+EpiLens also includes reusable classification and extraction tasks. Their
+structured outputs and source passages are designed for review; validate a task
+on examples from your corpus before using its results at scale.
 
-## What EpiLens Does
+## Learn more
 
-- Parses PDFs, text, and Markdown with a deterministic lightweight default.
-- Indexes one paper or a corpus into a local file store without a database
-  server.
-- Retrieves semantically relevant passages and keeps their paper/section
-  provenance.
-- Answers questions over retrieved evidence using Gemini, OpenAI, OpenRouter,
-  Anthropic, or Ollama.
-- Runs schema-validated classification across analyst-defined label axes.
-- Extracts structured items such as data sources, supplementary links, and key
-  references.
-- Lets researchers define new classifiers and extractors as JSON task specs,
-  without changing Python code.
-- Scales to optional FAISS or Qdrant vector stores, MongoDB metadata, GROBID
-  parsing, a FastAPI service, and a Streamlit Studio.
-
-## Mental Model
-
-EpiLens follows the three-stage workflow described in the accompanying paper:
-
-1. **Ingest and index:** parse papers, split them into chunks, embed the chunks,
-   and store them locally.
-2. **Retrieve:** find the most relevant chunks for a query or fixed workflow
-   template, optionally filtering by paper or section.
-3. **Generate and validate:** pass only the selected evidence to an LLM,
-   validate structured outputs against a schema, and retain provenance.
-
-The LLM is a controlled linguistic step, not a knowledge database. Corpus
-storage, retrieval, task logic, and validation remain local; only the selected
-evidence is sent to a remote provider when you choose one.
-
-## Main Commands
-
-| Command | Purpose | Needs an LLM? |
-| --- | --- | --- |
-| `epilens inspect FILE` | Parse and summarize a document | No |
-| `epilens explore QUERY --path PATH` | Retrieve matching passages | No |
-| `epilens ask QUERY --path PATH` | Retrieve and optionally synthesize | Optional |
-| `epilens init DIR` | Create a reusable workspace | No |
-| `epilens index PATH` | Add papers to a local index | No |
-| `epilens papers` | List indexed papers | No |
-| `epilens classify --file FILE` | Apply a classification workflow | Yes |
-| `epilens precision-miner --file FILE` | Extract structured items | Yes |
-| `epilens tasks` | List built-in and user-defined tasks | No |
-| `epilens doctor` | Check local essentials without network probes | No |
-| `epilens studio` | Start the API and browser UI together | Depends on action |
-
-Run `epilens COMMAND --help` for examples and advanced controls. `--quality
-fast|balanced|accurate` is the simplest way to tune chunking and retrieval;
-individual settings remain available for experienced users.
-
-## Optional Extras
-
-Install extras with `python -m pip install "epilens[EXTRA]"`.
-
-| Extra | Adds |
-| --- | --- |
-| `gemini` | Google Gemini SDK |
-| `openai` | OpenAI SDK |
-| `openrouter` | OpenAI-compatible SDK used for OpenRouter |
-| `anthropic` | Anthropic SDK |
-| `providers` | All hosted-provider SDKs |
-| `server` | FastAPI, Uvicorn, and uploads |
-| `ui` | Streamlit and pandas |
-| `all` | Local file-backed API + Studio UI (`server,ui`) |
-| `faiss` | Local FAISS vector backend |
-| `qdrant` | Qdrant client; a Qdrant server is still required |
-| `mongo` | MongoDB client; a MongoDB server is still required |
-| `grobid` | GROBID client and XML parser; a GROBID server is still required |
-| `local-ml` | Torch-based embeddings and Unstructured `hi_res` PDF parsing |
-| `dev` | Tests, lint, type checking, and build/release tools |
-
-Examples:
-
-```bash
-python -m pip install "epilens[openai]"      # one hosted provider
-python -m pip install "epilens[all,gemini]" # Studio plus Gemini
-python -m pip install "epilens[grobid]"     # richer academic-PDF parsing
-```
-
-## Configuration
-
-EpiLens loads environment variables from your shell and from the nearest `.env`
-file. You do not need one for the local-first workflow. For generated answers,
-`epilens quickstart` creates a minimal `.env` containing only the provider you
-choose. Manual configuration looks like:
-
-```dotenv
-EPILENS_LLM_PROVIDER=gemini
-EPILENS_LLM_MODEL=gemini-2.5-flash
-GEMINI_API_KEY=your-key-here
-
-# Optional local overrides
-EPILENS_EMBED_PROVIDER=auto
-EPILENS_DEVICE=cpu
-EPILENS_OUTPUT_FORMAT=human
-```
-
-Other provider credentials are `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, and
-`ANTHROPIC_API_KEY`; Ollama uses `OLLAMA_HOST`. The inert, beginner-safe
-template is [`.env.example`](https://github.com/VinsRR/EpiLens/blob/main/.env.example).
-Docker and external-service settings are kept separately in
-[`.env.docker.example`](https://github.com/VinsRR/EpiLens/blob/main/.env.docker.example).
-
-Secrets belong in `.env` or the deployment secret store, never in a workspace
-file, notebook, issue, or commit.
-
-## Structured Workflows
-
-The built-in workflow families are:
-
-- `PaperClassifier`, for evidence-backed labels such as paper type,
-  geographical coverage, data type, and reported data accessibility.
-- `PrecisionMiner`, for variable-length structured extraction such as data
-  sources, supplementary material, and key references.
-
-A workflow fixes two task-specific artifacts across every paper: retrieval and
-prompt instructions, plus a Pydantic/JSON output schema. Reusing the same
-template and validating the same schema makes corpus-level outputs comparable
-and machine-readable.
-
-Create a task interactively:
-
-```bash
-epilens tasks new --kind classifier --interactive
-epilens tasks new --kind miner --interactive
-```
-
-Place the resulting JSON file in a workspace's `tasks/` directory for automatic
-discovery, pass it directly with `--task-file`, or expose a directory through
-`EPILENS_TASKS_DIR`.
-
-## Python API
-
-Start at the public package surface:
-
-```python
-from epilens import EpiLensRuntime, PaperClassifier, PrecisionMiner
-
-runtime = EpiLensRuntime()
-health = runtime.health()
-print(health.checks)
-```
-
-For a small, fully local parsing example:
-
-```python
-from epilens.rag.ingestion.document_loader import DocumentLoaderFactory
-
-loader = DocumentLoaderFactory.get_loader("pdfminer")
-sections, metadata, references = loader.load("paper.pdf")
-
-print(metadata.title)
-print(sections[0].content[:500])
-```
-
-The ordered notebooks progressively introduce schemas, indexing, retrieval,
-PDF ingestion, structured extraction/classification, the runtime facade, and
-workspaces. They use helper files and sample PDFs that are intentionally not
-bundled in the wheel, so clone the repository before running them:
-
-```bash
-git clone https://github.com/VinsRR/EpiLens.git
-cd EpiLens
-python -m pip install -e ".[dev]"
-jupyter lab notebooks/
-```
-
-See the
-[notebook guide](https://github.com/VinsRR/EpiLens/tree/main/notebooks) for the
-recommended order.
-
-## Studio and API
-
-The easiest browser path uses local file-backed workspaces and requires no
-Qdrant or MongoDB:
-
-```bash
-python -m pip install "epilens[all]"
-epilens studio
-```
-
-Studio starts FastAPI and Streamlit together on `127.0.0.1`, manages both
-processes, and opens the workspace UI. To run the parts separately:
-
-```bash
-epilens serve --port 8000
-epilens-ui
-```
-
-The API includes health, retrieval, classification, precision-mining, and
-workspace-scoped routes. Interactive API documentation is available at
-`http://127.0.0.1:8000/docs` while the server is running.
-
-For a shared deployment with Qdrant and GROBID, use the repository's
-[Docker Compose configuration](https://github.com/VinsRR/EpiLens/blob/main/docker-compose.yml):
-
-```bash
-cp .env.docker.example .env
-# Add a provider key to .env if generated answers are required.
-docker compose up --build
-```
-
-MongoDB remains external and is only needed for the unscoped
-corpus-backed routes; the workspace-scoped Studio path is file-backed.
+- [Guided notebook tutorial](https://github.com/VinsRR/EpiLens/blob/main/notebooks/README.md) — a small, offline corpus
+  exercise; the other notebooks are optional deep dives.
+- [CLI quickstart](https://github.com/VinsRR/EpiLens/wiki/Local-CLI-Quickstart)
+  and [command reference](https://github.com/VinsRR/EpiLens/wiki/CLI-Reference)
+- [Workspaces](https://github.com/VinsRR/EpiLens/wiki/Workspaces) and
+  [custom classification/extraction tasks](https://github.com/VinsRR/EpiLens/wiki/Declarative-Tasks)
+- [Python API](https://github.com/VinsRR/EpiLens/wiki/Python-Usage),
+  [Studio](https://github.com/VinsRR/EpiLens/wiki/Streamlit-UI), and
+  [server deployment](https://github.com/VinsRR/EpiLens/wiki/Server-Mode-and-Docker)
+- [Configuration](https://github.com/VinsRR/EpiLens/wiki/Configuration),
+  [troubleshooting](https://github.com/VinsRR/EpiLens/wiki/Troubleshooting), and
+  the [full wiki](https://github.com/VinsRR/EpiLens/wiki)
 
 ## Development
 
-```bash
-git clone https://github.com/VinsRR/EpiLens.git
-cd EpiLens
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -e ".[dev,all,qdrant,mongo,faiss,providers]"
-pytest -q
-ruff check src/epilens tests
-python scripts/clean_release_artifacts.py
-python -m build
-python -m twine check dist/*
-```
+For a local development install, run `python -m pip install -e ".[dev]"` and
+`pytest -q`. See the repository's [tests](https://github.com/VinsRR/EpiLens/blob/main/tests/README.md) for test suites.
 
-CI tests the base package across Python 3.10-3.14 on Linux and representative
-macOS and Windows versions, exercises optional API/UI/store/provider paths,
-validates both distribution artifacts, and installs the wheel in an isolated
-environment outside the source tree.
+## Citation and license
 
-Releases use PyPI Trusted Publishing. Maintainers configure the GitHub `pypi`
-environment once, update the version and changelog, then push a matching tag
-such as `v0.1.0`; the release workflow rejects mismatched tags before upload.
-
-## Citation
-
-EpiLens was developed by Vincenzo Perri at ISI Foundation. Software citation
-metadata is in
-[`CITATION.cff`](https://github.com/VinsRR/EpiLens/blob/main/CITATION.cff).
-The accompanying manuscript is still a draft, so its final journal reference
-and DOI can be added when available.
-
-## License
-
-EpiLens is distributed under the
-[GNU Affero General Public License v3.0](https://github.com/VinsRR/EpiLens/blob/main/LICENSE.txt)
-(`AGPL-3.0-only`).
+Citation metadata is in [CITATION.cff](https://github.com/VinsRR/EpiLens/blob/main/CITATION.cff).
+EpiLens is licensed under [AGPL-3.0-only](https://github.com/VinsRR/EpiLens/blob/main/LICENSE.txt).

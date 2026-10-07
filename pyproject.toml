@@ -126,7 +126,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/VinsRR/EpiLens"
-Documentation = "https://github.com/VinsRR/EpiLens#readme"
+Documentation = "https://github.com/VinsRR/EpiLens/wiki"
 Repository = "https://github.com/VinsRR/EpiLens.git"
 Issues = "https://github.com/VinsRR/EpiLens/issues"
 Changelog = "https://github.com/VinsRR/EpiLens/blob/main/CHANGELOG.md"

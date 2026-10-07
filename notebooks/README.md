@@ -1,140 +1,63 @@
-# EpiLens Notebook Guide
+# EpiLens notebooks
 
-These notebooks are a hands-on tour of EpiLens's **Python API**. They run
-**offline and without any API key** — each workflow notebook uses a small
-deterministic generator in place of a real LLM, and a tiny keyword embedder in
-place of a real embedding model, so you can see the full
-retrieval → prompt → parse → result loop without credentials, model downloads,
-or network calls. Real usage would call `EmbedderFactory.get_embedder(...)`
-instead, which defaults to the torch-free `fastembed` backend and downloads a
-model on first use.
+Start with **[01: guided tutorial](01_core_quickstart.ipynb)**. It is a short,
+complete exercise: inspect two synthetic papers, build a local index, retrieve
+candidate passages, apply one classification task to both papers, review the
+evidence, and count the labels. At the review step, ask participants whether
+each label is supported by the displayed passage. The other notebooks are
+optional explorations, not prerequisites for 01.
 
-They can be run from either the repository root or the `notebooks/` directory.
+The examples run offline. `epilens_nb.py` supplies a tiny keyword embedder and
+scripted JSON responses, so no model, API key, service, or network download is
+needed. **The scripted labels and extracted items are supplied by the notebooks;
+they are not predictions.** Keyword scores illustrate the retrieval interface,
+not retrieval quality. A valid JSON schema checks output shape. The notebooks
+show candidate passages for review; model provenance, when present, gives
+another trace to inspect. Neither establishes that a classification or
+extraction is correct.
 
-## The `epilens_nb` Helper
+## Run the notebooks
 
-Every notebook opens by importing [`epilens_nb.py`](epilens_nb.py), a small
-module that sits next to the notebooks. It is **notebook scaffolding, not part of
-the `epilens` package**, and it holds the two things every notebook would
-otherwise copy:
-
-- **Path bootstrap** — importing it adds `src/` to `sys.path` when it detects a
-  local checkout; installed-package users need nothing.
-- **Deterministic offline stand-ins** — `TinyKeywordEmbedder`,
-  `FixedJSONGenerator`, `StaticRetriever`, two small paper corpora
-  (`sample_papers()`, `classification_papers()`), and `build_index()` /
-  `build_academic_db()` convenience constructors.
-
-Notebooks still build things by hand where the construction *is* the lesson:
-notebook 01 writes out `PaperMetadata` / `StructuredSection` objects, and
-notebooks 02 and 04 wire up the indexer and retriever explicitly. The helper only
-absorbs the boilerplate around those.
-
-## Learning Path
-
-1. `01_core_quickstart.ipynb`
-   Build the smallest EpiLens loop: structured paper data, local indexing,
-   retrieval, and provenance.
-
-2. `02_indexing_and_retrieval.ipynb`
-   Inspect chunking, vector-store payloads, corpus retrieval, paper-scoped
-   retrieval, and payload filtering.
-
-3. `03_pdf_ingestion.ipynb`
-   Extract sections and metadata from the PDFs in `pdf_samples/` and store them
-   in an `AcademicDB`.
-
-4. `04_pdf_retrieval_and_workflows.ipynb`
-   Index the sample PDFs, retrieve evidence, generate a trace, and run a
-   structured extraction workflow.
-
-5. `05_precision_miner_workflow.ipynb`
-   Run `PrecisionMiner` on controlled evidence and inspect the detailed
-   workflow trace.
-
-6. `06_data_source_extraction.ipynb`
-   Validate data-source extraction JSON, review whether extracted items are
-   supported by retrieved evidence, then define a **new miner declaratively**
-   with a `TaskSpec`.
-
-7. `07_classification_workflow.ipynb`
-   Run a built-in classification task, then **define your own task two ways**:
-   declaratively with a `TaskSpec` (the recommended path), and by building a
-   low-level `BaseClassifierConfig` by hand.
-
-8. `08_service_runtime.ipynb`
-   Step up from hand-composed objects to `EpiLensRuntime` — the service layer
-   the CLI, API, and UI all share — including its local-first fallback and the
-   `explore` / `classify` / `precision_mine` verbs.
-
-9. `09_workspaces.ipynb`
-   Configuration-as-a-folder: create a workspace, watch auto-discovery walk up
-   for `epilens.toml`, drive the runtime from it, and drop a declarative task
-   into `tasks/`.
-
-## Beyond The Notebooks
-
-The notebooks focus on the Python API. EpiLens also offers higher-level entry
-points documented in the
-[main README](https://github.com/VinsRR/EpiLens#readme):
-
-- **CLI** — `epilens quickstart`, `doctor`, `init`, `index`, `inspect`,
-  `papers`, `explore`, `ask`, `classify`, `precision-miner`, `tasks`, `serve`,
-  and `studio`. Start with the
-  [five-minute first run](https://github.com/VinsRR/EpiLens#a-five-minute-first-run).
-- **Workspaces** — `epilens init <name>` creates a self-contained folder
-  (`epilens.toml`, `papers/`, `index/`, `outputs/`, `tasks/`) that commands
-  auto-discover when run from inside it. Notebook 09 covers the Python side; see
-  the main README for the CLI walkthrough.
-- **Declarative tasks** — define classifiers/miners as JSON, scaffold them with
-  `epilens tasks new` (add `--interactive` for a guided wizard), validate with
-  `epilens tasks validate`, and run them from the CLI (`--task-file`) or
-  inline via the API. See
-  [Structured Workflows](https://github.com/VinsRR/EpiLens#structured-workflows).
-- **UI** — `epilens studio` runs the Streamlit interface local-first, with no
-  external services required. `epilens serve` plus the UI over a shared
-  Qdrant/MongoDB corpus is the deployed/multi-user setup. See
-  [Studio and API](https://github.com/VinsRR/EpiLens#studio-and-api).
-
-## Running The Notebooks
-
-The helper module and sample PDFs are repository assets, not wheel contents.
-Clone the repository, install it in editable mode, and then open the notebooks:
+From a clone of this repository:
 
 ```bash
-git clone https://github.com/VinsRR/EpiLens.git
-cd EpiLens
-python -m pip install -e ".[dev]"
+python -m pip install -e .
 python -m pip install jupyterlab
 jupyter lab notebooks/
 ```
 
-Run cells top to bottom. To use a real model instead of the deterministic demo
-generators, replace the demo `Generator` with `epilens.rag.generation.llm_generator.LLMGenerator`
-and set the relevant provider key (`GEMINI_API_KEY`, `OPENAI_API_KEY`,
-`OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, or `OLLAMA_HOST`).
+Run each notebook top to bottom. The setup cells work when the kernel starts in
+the repository root or in `notebooks/`. Scratch indexes and stores are created
+in temporary directories. The included PDFs are small open examples, separate
+from the manuscript's research corpus.
 
-One behaviour changes when you do: classifier and miner configs default to
-`structured_output="schema"`, so the workflow passes a `response_schema` down to
-the generator and the provider is *constrained* at decode time to emit conforming
-JSON, rather than merely asked to. The demo generators ignore that kwarg. Set
-`structured_output="json"` or `"off"` on the config (or `--structured-output` on
-the CLI) if a provider or model does not support it.
+## Choose a follow-up
 
-## Sample PDFs
+| Notebook | What it teaches |
+| --- | --- |
+| [01 — Guided tutorial](01_core_quickstart.ipynb) | One fixed classification scheme across a tiny corpus, with an evidence check and a count. Start here. |
+| [02 — Indexing and retrieval](02_indexing_and_retrieval.ipynb) | Chunking, stored payloads, paper-scoped retrieval, and section filters. |
+| [03 — PDF ingestion](03_pdf_ingestion.ipynb) | Parse sample PDFs and inspect extraction quality before indexing. |
+| [04 — PDF retrieval](04_pdf_retrieval_and_workflows.ipynb) | Search the parsed PDF corpus and inspect retrieved passages. |
+| [05 — Precision Miner](05_precision_miner_workflow.ipynb) | Extract a per-paper list of candidate data sources and check its support. |
+| [06 — Custom miner](06_data_source_extraction.ipynb) | Define another extraction task with a declarative `TaskSpec`. |
+| [07 — Custom classifier](07_classification_workflow.ipynb) | Compare a built-in classifier with a small declarative task. |
+| [08 — Service runtime](08_service_runtime.ipynb) | Call the same `explore`, `classify`, and `precision_mine` verbs used by the app. |
+| [09 — Workspaces](09_workspaces.ipynb) | Put configuration and task specs in a portable workspace folder. |
 
-`pdf_samples/` contains small open-access PDFs used by the ingestion and PDF
-retrieval notebooks. Notebooks 03 and 04 explicitly use the deterministic,
-included `pdfminer` loader, so their behavior does not depend on which optional
-packages happen to be installed.
+For a live session, **01 alone is the teaching path**. Use 02–05 when the group
+wants to examine a specific stage, and 06–09 for task authoring or application
+integration. A classifier's labels may be aggregated only after validation on
+labelled examples and review of disagreements. A miner's output is a per-paper
+worklist to verify, not a distribution to count without review. Data access
+labels, when used, describe what a paper *reports*; they do not check whether a
+link or dataset is currently accessible.
 
-- **Base install** — `pdfminer` is fast and dependency-light, but section titles
-  are heuristic and tables are not reconstructed.
-- **`pip install "epilens[local-ml]"`** — adds `unstructured[pdf]`, enabling
-  layout-model parsing with better section boundaries (and a much heavier
-  install).
-- **GROBID** — for the cleanest structure, point EpiLens at a running GROBID
-  service with `--loader grobid` (see the wiki Troubleshooting page).
+## Moving to real data
 
-If you change the loader in notebooks 03 and 04, expect section counts and
-titles to differ between parser backends.
+For a model-backed run, replace the demo embedder and scripted generator with
+`EmbedderFactory.get_embedder(...)` and `LLMGenerator`, and configure a provider.
+The default `fastembed` path downloads a model on first use. Check parsing and
+retrieved passages on a sample of your own PDFs before processing a corpus,
+then validate the task against manually labelled papers. The
+[main README](../README.md) covers the CLI, API, UI, and workspace setup.
