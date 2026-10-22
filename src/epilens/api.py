@@ -15,9 +15,9 @@ from epilens.services import (
     EpiLensRuntime,
     JobManager,
     RuntimeConfig,
-    StudioRepository,
     TaskService,
     WorkspaceService,
+    open_studio_repository,
     run_export,
     runtime_config_for_workspace,
 )
@@ -266,7 +266,8 @@ class RunResource(StudioResource):
     summary: str
     request: Dict[str, Any]
     config: Dict[str, Any]
-    result_path: str
+    # None when the backend stores results in the database (PostgreSQL).
+    result_path: Optional[str] = None
     created_at: str
     result: Optional[Any] = None
 
@@ -662,7 +663,7 @@ def studio_precision_miner(
 @app.get("/workspaces/{workspace_id}/jobs", response_model=JobListResource)
 def list_jobs(workspace_id: str) -> Dict[str, Any]:
     try:
-        repository = StudioRepository(_workspaces().get(workspace_id))
+        repository = open_studio_repository(_workspaces().get(workspace_id))
         return {"items": repository.list_jobs()}
     except Exception as exc:
         raise _studio_http_error(exc) from exc
@@ -673,7 +674,7 @@ def list_jobs(workspace_id: str) -> Dict[str, Any]:
 )
 def get_job(workspace_id: str, job_id: str) -> Dict[str, Any]:
     try:
-        return StudioRepository(_workspaces().get(workspace_id)).get_job(job_id)
+        return open_studio_repository(_workspaces().get(workspace_id)).get_job(job_id)
     except Exception as exc:
         raise _studio_http_error(exc) from exc
 
@@ -704,7 +705,7 @@ def retry_job(workspace_id: str, job_id: str) -> Dict[str, Any]:
 @app.get("/workspaces/{workspace_id}/runs", response_model=RunListResource)
 def list_runs(workspace_id: str) -> Dict[str, Any]:
     try:
-        return {"items": StudioRepository(_workspaces().get(workspace_id)).list_runs()}
+        return {"items": open_studio_repository(_workspaces().get(workspace_id)).list_runs()}
     except Exception as exc:
         raise _studio_http_error(exc) from exc
 
@@ -712,7 +713,7 @@ def list_runs(workspace_id: str) -> Dict[str, Any]:
 @app.get("/workspaces/{workspace_id}/runs/{run_id}", response_model=RunResource)
 def get_run(workspace_id: str, run_id: str) -> Dict[str, Any]:
     try:
-        return StudioRepository(_workspaces().get(workspace_id)).get_run(run_id)
+        return open_studio_repository(_workspaces().get(workspace_id)).get_run(run_id)
     except Exception as exc:
         raise _studio_http_error(exc) from exc
 
@@ -720,7 +721,7 @@ def get_run(workspace_id: str, run_id: str) -> Dict[str, Any]:
 @app.get("/workspaces/{workspace_id}/runs/{run_id}/download")
 def download_run(workspace_id: str, run_id: str, format: str = "json") -> Response:
     try:
-        run = StudioRepository(_workspaces().get(workspace_id)).get_run(run_id)
+        run = open_studio_repository(_workspaces().get(workspace_id)).get_run(run_id)
         content, media_type, filename = run_export(run, format)
         return Response(
             content=content,

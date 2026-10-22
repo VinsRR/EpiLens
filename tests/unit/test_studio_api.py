@@ -12,10 +12,10 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 import epilens.api as api_module  # noqa: E402
 from epilens.services.studio import (  # noqa: E402
-    StudioRepository,
     StudioSettings,
     WorkspaceService,
 )
+from epilens.services.studio_repository import open_studio_repository  # noqa: E402
 from epilens.schemas import PaperMetadata, StructuredSection  # noqa: E402
 
 
@@ -141,7 +141,7 @@ def test_upload_limits_and_retry_contract(client, monkeypatch) -> None:
     assert unsupported.status_code == 400
 
     workspace = api_module._workspaces().get("review")
-    repository = StudioRepository(workspace)
+    repository = open_studio_repository(workspace)
     interrupted = repository.create_job("index", {"document_ids": []}, total=0)
     repository.interrupt_active_jobs()
     monkeypatch.setattr(api_module._jobs()._executor, "submit", lambda *_args, **_kwargs: None)

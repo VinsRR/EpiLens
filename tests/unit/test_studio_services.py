@@ -14,11 +14,11 @@ from epilens.schemas import PaperMetadata, StructuredSection
 from epilens.services.studio import (
     CorpusService,
     JobManager,
-    StudioRepository,
     StudioSettings,
     TaskService,
     WorkspaceService,
 )
+from epilens.services.studio_repository import open_studio_repository
 from epilens.workflows.registry import classifier_catalog
 
 
@@ -106,9 +106,9 @@ def test_task_service_is_workspace_scoped_and_validates_prompts(workspace_servic
 def test_repository_marks_active_jobs_interrupted_only_when_requested(workspace_service) -> None:
     workspace_service.create("review")
     workspace = workspace_service.get("review")
-    repository = StudioRepository(workspace)
+    repository = open_studio_repository(workspace)
     job = repository.create_job("index", {"document_ids": []}, total=0)
-    assert StudioRepository(workspace).get_job(job["id"])["status"] == "queued"
+    assert open_studio_repository(workspace).get_job(job["id"])["status"] == "queued"
     repository.interrupt_active_jobs()
     assert repository.get_job(job["id"])["status"] == "interrupted"
 
@@ -180,7 +180,7 @@ def test_cli_workspace_index_uses_managed_corpus_service(
     )
     assert result.exit_code == 0, result.output
     assert json.loads(result.stdout)["papers"][0]["paper_id"] == "managed"
-    documents = StudioRepository(workspace).list_documents()
+    documents = open_studio_repository(workspace).list_documents()
     assert documents[0]["original_name"] == "managed.txt"
     assert documents[0]["status"] == "indexed"
 
@@ -349,7 +349,7 @@ def test_job_manager_marks_restart_jobs_interrupted_and_retries(
 ) -> None:
     workspace_service.create("review")
     workspace = workspace_service.get("review")
-    repository = StudioRepository(workspace)
+    repository = open_studio_repository(workspace)
     original = repository.create_job("index", {"document_ids": []}, total=0)
     manager = JobManager(workspace_service)
     try:
@@ -388,7 +388,7 @@ def test_job_manager_persists_partial_batch_results(
             paper_ids=["good", "bad"],
             task_key="data_accessibility",
         )
-        repository = StudioRepository(workspace)
+        repository = open_studio_repository(workspace)
         deadline = time.monotonic() + 3
         while time.monotonic() < deadline:
             current = repository.get_job(job["id"])

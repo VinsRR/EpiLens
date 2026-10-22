@@ -3,6 +3,17 @@
 All notable user-facing changes are recorded here. This project follows
 [Semantic Versioning](https://semver.org/) once releases are published.
 
+## Unreleased
+
+### Changed
+
+- Studio state (documents, jobs, run history) now goes through a
+  `StudioRepository` interface. SQLite remains the default; setting
+  `EPILENS_DATABASE_URL=postgresql://...` selects a PostgreSQL backend
+  (`pip install 'epilens[postgres]'`) that keeps every
+  workspace in one database and stores run results as `jsonb`.
+- `RunResource.result_path` is optional: database-backed runs have no file.
+
 ## 0.1.0 - Unreleased
 
 ### Added

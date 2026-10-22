@@ -85,6 +85,11 @@ qdrant = [
 mongo = [
     "pymongo>=4.6,<5",
 ]
+# PostgreSQL for Studio documents, jobs, and run history
+# (`EPILENS_DATABASE_URL=postgresql://...`). SQLite stays the default.
+postgres = [
+    "psycopg[binary]>=3.2,<4",
+]
 # GROBID-backed PDF parsing (`--loader grobid`). Provides the `grobid_client`
 # module used by epilens.rag.ingestion.local_grobid_client.
 grobid = [
@@ -142,4 +147,4 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-epilens = ["py.typed"]
+epilens = ["py.typed", "services/migrations/postgres/*.sql"]

@@ -7,13 +7,17 @@ from .runtime import (
 from .studio import (
     CorpusService,
     JobManager,
-    StudioRepository,
     StudioSettings,
     TaskService,
     WorkspaceService,
-    json_ready,
     run_export,
     runtime_config_for_workspace,
+)
+from .studio_repository import (
+    SqliteStudioRepository,
+    StudioRepository,
+    json_ready,
+    open_studio_repository,
 )
 
 __all__ = [
@@ -23,11 +27,13 @@ __all__ = [
     "RuntimeConfig",
     "CorpusService",
     "JobManager",
+    "SqliteStudioRepository",
     "StudioRepository",
     "StudioSettings",
     "TaskService",
     "WorkspaceService",
     "json_ready",
+    "open_studio_repository",
     "run_export",
     "runtime_config_for_workspace",
 ]
